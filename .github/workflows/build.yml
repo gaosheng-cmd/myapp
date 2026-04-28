@@ -10,62 +10,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
-        autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
-        libtinfo6 cmake libffi-dev libssl-dev autoconf-archive
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
+            autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
+            libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev \
+            autoconf-archive
 
-    - name: Set up Android SDK environment
-      run: |
-        # 创建 Buildozer 期望的 SDK 目录，并链接到系统预装 SDK
-        mkdir -p /home/runner/.buildozer/android/platform
-        ln -sf /usr/local/lib/android/sdk /home/runner/.buildozer/android/platform/android-sdk
-        # 确保 build-tools 30.0.3 可用
-        if [ ! -d "/usr/local/lib/android/sdk/build-tools/30.0.3" ]; then
-          echo "Installing build-tools 30.0.3..."
-          sudo /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;30.0.3"
-        fi
-        # 设置环境变量
-        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+      - name: Set up Android SDK environment
+        run: |
+          mkdir -p /home/runner/.buildozer/android/platform
+          ln -sf /usr/local/lib/android/sdk /home/runner/.buildozer/android/platform/android-sdk
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
 
-    - name: Install Cython and Buildozer
-      run: |
-        pip3 install --user cython buildozer
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Install Cython and Buildozer
+        run: |
+          pip3 install --user cython buildozer
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    - name: Configure buildozer.spec
-      run: |
-        # 如果 buildozer.spec 不存在则初始化
-        if [ ! -f buildozer.spec ]; then
-            buildozer init
-        fi
-        # 强制覆盖 SDK 和许可证相关配置
-        sed -i '/^android.sdk_path =/d' buildozer.spec
-        sed -i '/^android.skip_update =/d' buildozer.spec
-        sed -i '/^android.accept_sdk_license =/d' buildozer.spec
-        cat >> buildozer.spec << EOF
-android.sdk_path = /usr/local/lib/android/sdk
-android.skip_update = True
-android.accept_sdk_license = True
-android.api = 30
-android.minapi = 21
-android.build_tools = 30.0.3
-EOF
-        # 确保字体扩展名被包含
-        sed -i 's/# source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,otf/' buildozer.spec
+      - name: Configure buildozer.spec
+        run: |
+          if [ ! -f buildozer.spec ]; then
+              buildozer init
+          fi
+          # 删除已有的相关配置
+          sed -i '/^android.sdk_path =/d' buildozer.spec
+          sed -i '/^android.skip_update =/d' buildozer.spec
+          sed -i '/^android.accept_sdk_license =/d' buildozer.spec
+          # 追加正确配置（使用多个 echo，避免 heredoc 解析问题）
+          echo 'android.sdk_path = /usr/local/lib/android/sdk' >> buildozer.spec
+          echo 'android.skip_update = True' >> buildozer.spec
+          echo 'android.accept_sdk_license = True' >> buildozer.spec
+          echo 'android.api = 30' >> buildozer.spec
+          echo 'android.minapi = 21' >> buildozer.spec
+          echo 'android.build_tools = 30.0.3' >> buildozer.spec
+          # 确保字体扩展名被包含
+          sed -i 's/# source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,otf/' buildozer.spec
 
-    - name: Build APK
-      run: |
-        buildozer -v android debug
+      - name: Build APK
+        run: buildozer -v android debug
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: myapp-apk
-        path: bin/*.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapp-apk
+          path: bin/*.apk
