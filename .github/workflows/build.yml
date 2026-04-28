@@ -8,49 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Build APK with Buildozer
+        uses: artem-zinnatullin/action-buildozer@v1
+        with:
+          command: buildozer -v android debug
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        packages: 'platforms;android-30 build-tools;30.0.3 ndk;25.1.8937393'
-
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y git zip unzip autoconf libtool pkg-config \
-        zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
-        cmake libffi-dev libssl-dev
-
-    - name: Install Cython and Buildozer
-      run: |
-        pip install cython buildozer
-
-    - name: Build APK
-      run: |
-        # 如果仓库中没有 buildozer.spec，则生成一个
-        if [ ! -f buildozer.spec ]; then
-            buildozer init
-        fi
-        # 强制使用 GitHub Actions 提供的 SDK 路径
-        export ANDROID_HOME=$ANDROID_HOME
-        export ANDROID_SDK_ROOT=$ANDROID_HOME
-        # 修改 buildozer.spec 使用系统 SDK
-        sed -i 's|# android.sdk_path = .*|android.sdk_path = $ANDROID_HOME|' buildozer.spec
-        sed -i 's|# android.accept_sdk_license = .*|android.accept_sdk_license = True|' buildozer.spec
-        # 开始打包
-        buildozer -v android debug
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: myapp-apk
-        path: bin/*.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapp-apk
+          path: bin/*.apk
