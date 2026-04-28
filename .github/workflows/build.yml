@@ -1,1 +1,41 @@
+name: Build Kivy APK
 
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
+        autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
+        libtinfo5 cmake libffi-dev libssl-dev
+
+    - name: Install Cython and Buildozer
+      run: |
+        pip3 install --user cython buildozer
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Build APK
+      run: |
+        if [ ! -f buildozer.spec ]; then
+            buildozer init
+        fi
+        # 确保 .otf 字体文件被包含
+        sed -i 's/# source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,otf/' buildozer.spec
+        buildozer -v android debug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: myapp-apk
+        path: bin/*.apk
