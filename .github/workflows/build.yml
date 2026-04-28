@@ -30,10 +30,10 @@ jobs:
         if [ ! -f buildozer.spec ]; then
             buildozer init
         fi
-        # 打印许可证配置以确认
-        grep "android.accept_sdk_license" buildozer.spec
-        # 确保 .otf 字体文件被包含
+        # 确保字体文件扩展名被包含
         sed -i 's/# source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,otf/' buildozer.spec
+        # 显示许可证配置状态（调试用）
+        grep "android.accept_sdk_license" buildozer.spec
         buildozer -v android debug
 
     - name: Upload APK
