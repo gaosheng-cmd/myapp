@@ -8,9 +8,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer:latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Build APK
-        uses: kivy/buildozer-action@v1
+        run: |
+          # 确保 buildozer.spec 存在，如果没有则创建默认
+          if [ ! -f buildozer.spec ]; then
+            buildozer init
+          fi
+          # 强制设置接受 SDK 许可证（防止交互）
+          sed -i '/android.accept_sdk_license/d' buildozer.spec
+          echo 'android.accept_sdk_license = True' >> buildozer.spec
+          # 开始打包
+          buildozer -v android debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          buildozer_version: master
+          name: myapp-apk
+          path: bin/*.apk
