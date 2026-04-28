@@ -23,8 +23,16 @@ jobs:
 
       - name: Set up Android SDK environment
         run: |
+          # 创建 Buildozer 期望的 SDK 目录结构
           mkdir -p /home/runner/.buildozer/android/platform
+          # 删除可能存在的旧链接或目录
+          rm -rf /home/runner/.buildozer/android/platform/android-sdk
+          # 创建符号链接指向系统 SDK
           ln -sf /usr/local/lib/android/sdk /home/runner/.buildozer/android/platform/android-sdk
+          # 创建 tools 符号链接，让 Buildozer 能发现 sdkmanager
+          cd /home/runner/.buildozer/android/platform/android-sdk
+          ln -sf cmdline-tools/latest tools
+          # 设置环境变量
           echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
 
@@ -35,15 +43,19 @@ jobs:
 
       - name: Configure buildozer.spec
         run: |
+          # 如果仓库中没有 buildozer.spec，则生成一个基础版本
           if [ ! -f buildozer.spec ]; then
               buildozer init
           fi
-          # 删除已有的相关配置
+          # 删除可能干扰的旧配置
           sed -i '/^android.sdk_path =/d' buildozer.spec
           sed -i '/^android.skip_update =/d' buildozer.spec
           sed -i '/^android.accept_sdk_license =/d' buildozer.spec
-          # 追加正确配置（使用多个 echo，避免 heredoc 解析问题）
-          echo 'android.sdk_path = /usr/local/lib/android/sdk' >> buildozer.spec
+          sed -i '/^android.api =/d' buildozer.spec
+          sed -i '/^android.minapi =/d' buildozer.spec
+          sed -i '/^android.build_tools =/d' buildozer.spec
+          # 追加正确的配置
+          echo 'android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk' >> buildozer.spec
           echo 'android.skip_update = True' >> buildozer.spec
           echo 'android.accept_sdk_license = True' >> buildozer.spec
           echo 'android.api = 30' >> buildozer.spec
