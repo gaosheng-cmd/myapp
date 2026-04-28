@@ -452,4 +452,4 @@ warn_on_root = 1
 #
 #buildozer --profile demo android debug
 # 强制使用本地python-for-android，跳过官方仓库校验
-p4a.source_dir = /home/sgs/kivy_project/.buildozer/android/platform/python-for-android
+# p4a.source_dir =
