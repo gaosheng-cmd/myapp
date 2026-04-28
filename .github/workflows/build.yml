@@ -10,65 +10,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
-            autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
-            libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev \
-            autoconf-archive
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
 
-      - name: Set up Android SDK environment
-        run: |
-          # 创建 Buildozer 期望的 SDK 目录结构
-          mkdir -p /home/runner/.buildozer/android/platform
-          # 删除可能存在的旧链接或目录
-          rm -rf /home/runner/.buildozer/android/platform/android-sdk
-          # 创建符号链接指向系统 SDK
-          ln -sf /usr/local/lib/android/sdk /home/runner/.buildozer/android/platform/android-sdk
-          # 创建 tools 符号链接，让 Buildozer 能发现 sdkmanager
-          cd /home/runner/.buildozer/android/platform/android-sdk
-          ln -sf cmdline-tools/latest tools
-          # 设置环境变量
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: 'platforms;android-30 build-tools;30.0.3 ndk;25.1.8937393'
 
-      - name: Install Cython and Buildozer
-        run: |
-          pip3 install --user cython buildozer
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git zip unzip autoconf libtool pkg-config \
+        zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
+        cmake libffi-dev libssl-dev
 
-      - name: Configure buildozer.spec
-        run: |
-          # 如果仓库中没有 buildozer.spec，则生成一个基础版本
-          if [ ! -f buildozer.spec ]; then
-              buildozer init
-          fi
-          # 删除可能干扰的旧配置
-          sed -i '/^android.sdk_path =/d' buildozer.spec
-          sed -i '/^android.skip_update =/d' buildozer.spec
-          sed -i '/^android.accept_sdk_license =/d' buildozer.spec
-          sed -i '/^android.api =/d' buildozer.spec
-          sed -i '/^android.minapi =/d' buildozer.spec
-          sed -i '/^android.build_tools =/d' buildozer.spec
-          # 追加正确的配置
-          echo 'android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk' >> buildozer.spec
-          echo 'android.skip_update = True' >> buildozer.spec
-          echo 'android.accept_sdk_license = True' >> buildozer.spec
-          echo 'android.api = 30' >> buildozer.spec
-          echo 'android.minapi = 21' >> buildozer.spec
-          echo 'android.build_tools = 30.0.3' >> buildozer.spec
-          # 确保字体扩展名被包含
-          sed -i 's/# source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,otf/' buildozer.spec
+    - name: Install Cython and Buildozer
+      run: |
+        pip install cython buildozer
 
-      - name: Build APK
-        run: buildozer -v android debug
+    - name: Build APK
+      run: |
+        # 如果仓库中没有 buildozer.spec，则生成一个
+        if [ ! -f buildozer.spec ]; then
+            buildozer init
+        fi
+        # 强制使用 GitHub Actions 提供的 SDK 路径
+        export ANDROID_HOME=$ANDROID_HOME
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        # 修改 buildozer.spec 使用系统 SDK
+        sed -i 's|# android.sdk_path = .*|android.sdk_path = $ANDROID_HOME|' buildozer.spec
+        sed -i 's|# android.accept_sdk_license = .*|android.accept_sdk_license = True|' buildozer.spec
+        # 开始打包
+        buildozer -v android debug
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: myapp-apk
-          path: bin/*.apk
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: myapp-apk
+        path: bin/*.apk
