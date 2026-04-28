@@ -119,13 +119,13 @@ android.ndk_api = 21
 #android.private_storage = True
 
 # (str) Android NDK directory (if empty, it will be automatically downloaded.)
-android.ndk_path = /home/sgs/.buildozer/android/platform/android-ndk-r25b
+# android.ndk_path =
 
 # (str) Android SDK directory (if empty, it will be automatically downloaded.)
-android.sdk_path =/home/sgs/android-sdk
+# android.sdk_path =
 
 # (str) ANT directory (if empty, it will be automatically downloaded.)
-#android.ant_path =
+# android.ant_path =
 
 # (bool) If True, then skip trying to update the Android sdk
 # This can be useful to avoid excess Internet downloads or save time
